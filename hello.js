@@ -14,11 +14,12 @@ function getGreeting() {
   return "Bonne nuit";
 }
 
-function logUsage(greeting) {
+function logUsage(greeting, name) {
   let entries = [];
   if (fs.existsSync(USAGE_FILE)) {
     try {
-      entries = JSON.parse(fs.readFileSync(USAGE_FILE, "utf-8"));
+      const parsed = JSON.parse(fs.readFileSync(USAGE_FILE, "utf-8"));
+      entries = Array.isArray(parsed) ? parsed : [];
     } catch {
       entries = [];
     }
@@ -26,16 +27,26 @@ function logUsage(greeting) {
   entries.push({
     timestamp: new Date().toISOString(),
     greeting,
+    name,
   });
   if (entries.length > MAX_LOG_ENTRIES) {
     entries = entries.slice(entries.length - MAX_LOG_ENTRIES);
   }
-  fs.writeFileSync(USAGE_FILE, JSON.stringify(entries, null, 2) + "\n");
+  try {
+    fs.writeFileSync(USAGE_FILE, JSON.stringify(entries, null, 2) + "\n");
+  } catch (err) {
+    console.error("Warning: could not write usage log:", err.message);
+  }
 }
 
-const name = process.argv[2] || "monde";
+if (["--help", "-h"].includes(process.argv[2])) {
+  console.log("Usage: node hello.js [name]");
+  process.exit(0);
+}
+
+const name = (process.argv[2] || "monde").slice(0, 50);
 const greeting = getGreeting();
-const message = `${greeting}, ${name} !`;
+const message = `${greeting}, ${name}\u00A0!`;
 
 console.log(message);
-logUsage(greeting);
+logUsage(greeting, name);
