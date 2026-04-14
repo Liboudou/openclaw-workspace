@@ -20,8 +20,7 @@ app.post("/shorten", (req, res) => {
   }
 
   const code = saveUrl(url);
-  const port = process.env.PORT || 3000;
-  res.status(201).json({ shortUrl: `http://localhost:${port}/${code}` });
+  res.status(201).json({ shortUrl: `http://localhost:${PORT}/${code}` });
 });
 
 app.get("/:code", (req, res) => {
