@@ -2,10 +2,11 @@ import express from "express";
 import { saveUrl, getUrl } from "./store";
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 app.post("/shorten", (req, res) => {
-  const { url } = req.body;
+  const { url } = req.body ?? {};
 
   if (!url || typeof url !== "string") {
     res.status(400).json({ error: "Invalid or missing URL" });
@@ -32,7 +33,6 @@ app.get("/:code", (req, res) => {
   res.redirect(302, url);
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`URL shortener running on http://localhost:${PORT}`);
 });
