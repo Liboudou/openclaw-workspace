@@ -1,0 +1,12 @@
+{
+  "name": "pokemon-cards",
+  "version": "1.0.0",
+  "description": "Pokemon card collection website with in-memory database",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
