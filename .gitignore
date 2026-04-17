@@ -39,6 +39,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Submodules / nested repos
+# Submodules / nested repos — each project has its own git repo, don't track them here
 Claude_setup/
 agents/senior/
+projects/
