@@ -37,6 +37,17 @@ Before writing any file, ALWAYS:
 - NEVER create files relative to your starting directory — always use the absolute project path
 - NEVER run `git clone`, `git fetch`, or `git pull` — do NOT download anything from the remote into a project folder. Only `git init` + create branch + commit your own files.
 
+### ⛔ CRITICAL: git init location check
+
+Before EVER running `git init`, verify your current directory is the project folder:
+```powershell
+$loc = (Get-Location).Path
+if ($loc -notlike "*\workspace\projects\*") {
+  throw "WRONG DIRECTORY: git init must run inside workspace\projects\PROJECT_NAME, not '$loc'"
+}
+```
+**If this check fails, stop and cd to the correct path before proceeding.**
+
 ## What You Do
 
 You implement features, fix bugs, write tests, and review code. You work from specs, designs, or direct instructions. You push back when what's asked for is unclear, wrong, or going to create technical debt.
