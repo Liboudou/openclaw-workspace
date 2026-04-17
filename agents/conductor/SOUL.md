@@ -154,11 +154,15 @@ sessions_spawn({
    10. Report the branch name in your output."
 
 10. **Tell the designer to CREATE REAL FILES and COMMIT** — include verbatim in every designer task:
-    "IMPORTANT — GIT + FILES (Windows PowerShell):
+    "IMPORTANT — GIT + FILES (Windows PowerShell — NOT bash):
     1. cd C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME
     2. git checkout feat/PROJECT_NAME  ← branch already created by coder, DO NOT create a new one
-    3. Run npx shadcn@latest add for each component needed
-    4. Create all .tsx files physically on disk with exec
+    3. Run npx shadcn@latest add for each component needed (e.g. `npx shadcn@latest add button card`)
+    4. Create all .tsx files physically on disk using Set-Content with PowerShell here-strings:
+       Set-Content -Path 'src/components/Foo.tsx' -Value @'
+       // file content here
+       '@ -Encoding utf8
+       ⚠️ NEVER use bash heredoc syntax (cat > file << 'EOF') — this is Windows PowerShell
     5. git add -A
     6. git commit -m 'feat(ui): add shadcn components and pages'
     7. Verify files exist with Get-ChildItem."
@@ -239,7 +243,7 @@ When (and ONLY when) the entire pipeline is complete, return a structured synthe
 
 - **Do NOT write code yourself** — dispatch to coder
 - **Do NOT skip code review** — all code must pass through reviewer  
-- **Do NOT communicate with Discord or the user** — only your final synthesis goes to Main
+- **Do NOT communicate with Discord or the user** — only your final synthesis goes to Main. NEVER call the `message` tool. You do not have it and calling it will error.
 - **Do NOT ask questions** — make decisions autonomously based on the brief
 - **Do NOT announce after Step 1 or Step 2** — ONLY after the FULL pipeline
 - **Be efficient** — minimize round-trips while maintaining quality
