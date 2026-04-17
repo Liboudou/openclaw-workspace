@@ -58,10 +58,16 @@ After review is complete and code is APPROVED:
    - `feat(frontend): add dashboard components`
    - `fix(backend): correct API error handling`
 4. **Push to GitHub**: `git push -u origin <branch>`
-5. **Create a Pull Request** using the GitHub MCP tools:
-   - Use `create_pull_request` tool with a clear title and description
-   - Include a summary of what was built/changed and the review verdict
-6. **If remote doesn't exist**: Use `create_repository` to create it first, then add remote and push
+5. **Create a Pull Request** using the `gh` CLI:
+   ```powershell
+   gh pr create --title "feat: <project-name>" --body "<review summary + what was built>" --base main --head feat/<project-name> --repo Music-Maniacs/openclaw-workspace
+   ```
+6. **Merge the PR** using `gh` CLI (squash merge):
+   ```powershell
+   gh pr merge --squash --auto --repo Music-Maniacs/openclaw-workspace
+   ```
+   Or by PR number: `gh pr merge <number> --squash --repo Music-Maniacs/openclaw-workspace`
+7. **Report the PR URL** — capture it from `gh pr create` output and include in your result
 
 ### Git Rules
 - **Never push to `main` directly.** Always use feature branches + PR.

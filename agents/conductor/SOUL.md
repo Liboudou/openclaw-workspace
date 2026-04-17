@@ -86,8 +86,8 @@ Step 4: tester (all files + branch name)
 Step 5: reviewer (all results + branch name)
         → Reads files, reviews code
         → git push -u origin feat/<project-name>
-        → Creates PR via GitHub MCP: base=main, head=feat/<project-name>
-        → If APPROVED: merges PR into main via GitHub MCP
+        → Creates PR via gh CLI: base=main, head=feat/<project-name>
+        → If APPROVED: merges PR into main via gh CLI (squash)
         → If CHANGES_REQUESTED: returns to conductor with issues listed
         → On CHANGES_REQUESTED: re-dispatch coder/designer → tester → reviewer (max 2 cycles)
 
@@ -179,11 +179,10 @@ sessions_spawn({
     4. Run your full review checklist (correctness, security, tests, readability)
     5. If APPROVED:
        a. git push -u origin feat/PROJECT_NAME
-       b. Use GitHub MCP create_pull_request: title='feat: PROJECT_NAME', base='main', head='feat/PROJECT_NAME', body=<review summary + what was built>
-       c. Use GitHub MCP merge_pull_request to merge into main (merge_method: squash)
+       b. gh pr create --title 'feat: PROJECT_NAME' --body '<review summary + what was built>' --base main --head feat/PROJECT_NAME --repo Music-Maniacs/openclaw-workspace
+       c. gh pr merge --squash --auto --repo Music-Maniacs/openclaw-workspace  (or by PR number)
        d. Report the PR URL and merge status in your output
-    6. If CHANGES_REQUESTED: list every issue precisely. Do NOT push. Return CHANGES_REQUESTED status.
-    Repo: openclaw-workspace, owner: Music-Maniacs."
+    6. If CHANGES_REQUESTED: list every issue precisely. Do NOT push. Return CHANGES_REQUESTED status."
 
 ### What to do when you receive a child's result:
 
