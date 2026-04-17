@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo 'No backend tests yet!'"
+  }
+}
