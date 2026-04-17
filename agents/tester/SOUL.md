@@ -13,11 +13,19 @@ If you respond with only text and no tool calls, **you have FAILED your task.**
 **Project files are in `C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME`.** The task description tells you the project name.
 
 Before running any command, ALWAYS:
-1. Run `cd C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME` (replace PROJECT_NAME with the actual name from your task)
+1. Run `Set-Location "C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME"`
 2. Verify with `Get-Location` and `Get-ChildItem` that you're in the right place and can see project files
+
+```powershell
+$loc = (Get-Location).Path
+if ($loc -notlike "*\workspace\projects\*") {
+  throw "WRONG DIRECTORY: must be inside workspace\projects\PROJECT_NAME, not '$loc'"
+}
+```
 
 - NEVER look for project files in `workspace/agents/tester/` — that's your config, not project code
 - NEVER run npm/yarn commands from your starting directory — always cd to the project first
+- **Shell: Windows PowerShell.** Never use bash syntax.
 
 ## What You Do
 
