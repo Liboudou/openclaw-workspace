@@ -1,0 +1,280 @@
+/**
+ * OpenClaw Live Dashboard — Server
+ * 
+ * Serves a real-time visual dashboard for monitoring agent activity.
+ * Parses gateway logs + subagent runs to stream events via SSE.
+ * 
+ * Usage: node observability/dashboard.js
+ * Then open: http://localhost:3200
+ */
+
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+
+const PORT = parseInt(process.env.DASHBOARD_PORT || "3200", 10);
+const OPENCLAW_ROOT = path.resolve(__dirname, "..", "..");
+const WORKSPACE = path.join(OPENCLAW_ROOT, "workspace");
+const RUNS_FILE = path.join(OPENCLAW_ROOT, "subagents", "runs.json");
+const LOG_DIR = path.join(process.env.LOCALAPPDATA || "C:\\Users\\Lilian\\AppData\\Local", "Temp", "openclaw");
+const AGENTS_CONFIG = path.join(OPENCLAW_ROOT, "openclaw.json");
+
+// ─── Agent metadata ───
+const AGENT_META = {
+  main:      { name: "Main (CTO)",   icon: "🦞", color: "#ef4444", role: "Orchestrator" },
+  architect: { name: "Strut",        icon: "🏗️", color: "#3b82f6", role: "Architect" },
+  coder:     { name: "Hex",          icon: "💻", color: "#22c55e", role: "Coder" },
+  reviewer:  { name: "Lens",         icon: "🔍", color: "#a855f7", role: "Reviewer" },
+  planner:   { name: "Atlas",        icon: "🗺️", color: "#f59e0b", role: "Planner" },
+  senior:    { name: "Forge",        icon: "⚒️", color: "#ec4899", role: "Senior Dev" },
+  data:      { name: "Qubit",        icon: "🗄️", color: "#06b6d4", role: "Data Engineer" },
+  designer:  { name: "Iris",         icon: "🎨", color: "#f97316", role: "Designer" },
+  security:  { name: "Vault",        icon: "🛡️", color: "#64748b", role: "Security" },
+  finance:   { name: "Quant",        icon: "📈", color: "#14b8a6", role: "Finance" },
+};
+
+// SSE clients
+const sseClients = new Set();
+
+function broadcast(event, data) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of sseClients) {
+    try { res.write(msg); } catch { sseClients.delete(res); }
+  }
+}
+
+// ─── Data loading ───
+
+function loadRuns() {
+  try {
+    if (!fs.existsSync(RUNS_FILE)) return {};
+    const data = JSON.parse(fs.readFileSync(RUNS_FILE, "utf-8"));
+    return data.runs || {};
+  } catch { return {}; }
+}
+
+function getAgentFromSessionKey(key) {
+  // "agent:coder:acp:uuid" → "coder"
+  const m = key && key.match(/^agent:([^:]+):/);
+  return m ? m[1] : null;
+}
+
+function parseRuns() {
+  const raw = loadRuns();
+  const runs = [];
+  for (const [id, run] of Object.entries(raw)) {
+    const agent = getAgentFromSessionKey(run.childSessionKey);
+    const parent = getAgentFromSessionKey(run.controllerSessionKey);
+    runs.push({
+      id: run.runId,
+      agent,
+      parent,
+      task: run.task || "",
+      status: run.outcome?.status || (run.endedAt ? "completed" : "running"),
+      error: run.outcome?.error || null,
+      createdAt: run.createdAt,
+      startedAt: run.startedAt,
+      endedAt: run.endedAt || null,
+      durationMs: run.endedAt ? (run.endedAt - run.startedAt) : (Date.now() - run.startedAt),
+      endedReason: run.endedReason || null,
+    });
+  }
+  runs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return runs;
+}
+
+function getAgentStates(runs) {
+  const states = {};
+  for (const [id, meta] of Object.entries(AGENT_META)) {
+    states[id] = { ...meta, id, status: "idle", currentTask: null, lastSeen: null, runCount: 0, errorCount: 0 };
+  }
+
+  for (const run of runs) {
+    const aid = run.agent;
+    if (!aid || !states[aid]) continue;
+    states[aid].runCount++;
+    if (run.error) states[aid].errorCount++;
+    if (!run.endedAt) {
+      states[aid].status = "working";
+      states[aid].currentTask = run.task;
+    }
+    if (!states[aid].lastSeen || run.createdAt > states[aid].lastSeen) {
+      states[aid].lastSeen = run.createdAt;
+    }
+  }
+  return states;
+}
+
+// ─── Gateway log parsing ───
+
+function getTodayLogFile() {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return path.join(LOG_DIR, `openclaw-${ymd}.log`);
+}
+
+function stripAnsi(str) {
+  return str.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
+function parseLogLine(line) {
+  try {
+    const obj = JSON.parse(line);
+    const subsystem = obj["0"];
+    const message = obj["1"] || obj["0"] || "";
+    const level = obj._meta?.logLevelName || "INFO";
+    const time = obj.time || obj._meta?.date || "";
+    const cleanMsg = stripAnsi(typeof message === "string" ? message : JSON.stringify(message));
+    const cleanSub = stripAnsi(typeof subsystem === "string" ? subsystem : "");
+
+    // Detect agent context changes
+    const agentCtx = cleanMsg.match(/Agent context updated:\s*(\w+)/);
+    if (agentCtx) {
+      return { type: "agent_active", agent: agentCtx[1], time, level };
+    }
+
+    // Detect WS operations
+    const wsMatch = cleanMsg.match(/(sessions?\.\w+|agent\.?\w*)\s+(\d+)ms/);
+    if (wsMatch) {
+      return { type: "ws_op", operation: wsMatch[1], durationMs: parseInt(wsMatch[2]), time, level };
+    }
+
+    // Detect TASK_RESULT
+    if (cleanMsg.includes("TASK_RESULT") || cleanMsg.includes("ARCHITECTURE_RESULT") || cleanMsg.includes("REVIEW_RESULT")) {
+      return { type: "task_result", message: cleanMsg.slice(0, 500), time, level };
+    }
+
+    // Detect agent text messages (no subsystem = agent talking)
+    let parsedSub;
+    try { parsedSub = JSON.parse(cleanSub); } catch { parsedSub = null; }
+    if (!parsedSub?.subsystem && cleanMsg.length > 3 && level === "INFO") {
+      return { type: "agent_message", message: cleanMsg.slice(0, 500), time, level };
+    }
+
+    // Detect errors
+    if (level === "ERROR" || level === "FATAL") {
+      return { type: "error", message: cleanMsg.slice(0, 500), subsystem: cleanSub, time, level };
+    }
+
+    // Detect warns (only interesting ones)
+    if (level === "WARN" && cleanMsg.includes("lane wait exceeded")) {
+      const lane = cleanMsg.match(/lane=([^\s]+)/);
+      return { type: "warning", message: cleanMsg.slice(0, 300), lane: lane?.[1], time, level };
+    }
+
+    return null; // skip noise
+  } catch {
+    return null;
+  }
+}
+
+// Tail the log file
+let lastLogSize = 0;
+let recentEvents = [];
+const MAX_EVENTS = 200;
+
+function tailLog() {
+  const logFile = getTodayLogFile();
+  if (!fs.existsSync(logFile)) return;
+
+  const stat = fs.statSync(logFile);
+  if (stat.size <= lastLogSize) return;
+
+  const stream = fs.createReadStream(logFile, { start: lastLogSize, encoding: "utf-8" });
+  let buffer = "";
+  
+  stream.on("data", (chunk) => { buffer += chunk; });
+  stream.on("end", () => {
+    lastLogSize = stat.size;
+    const lines = buffer.split("\n").filter(l => l.trim());
+    for (const line of lines) {
+      const evt = parseLogLine(line);
+      if (evt) {
+        recentEvents.push(evt);
+        if (recentEvents.length > MAX_EVENTS) recentEvents.shift();
+        broadcast("log", evt);
+      }
+    }
+  });
+}
+
+// Watch runs.json for changes
+let lastRunsJson = "";
+function watchRuns() {
+  try {
+    if (!fs.existsSync(RUNS_FILE)) return;
+    const raw = fs.readFileSync(RUNS_FILE, "utf-8");
+    if (raw === lastRunsJson) return;
+    lastRunsJson = raw;
+
+    const runs = parseRuns();
+    const states = getAgentStates(runs);
+    broadcast("runs", { runs: runs.slice(0, 50), agents: states });
+  } catch {}
+}
+
+// ─── HTTP Server ───
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (url.pathname === "/" || url.pathname === "/index.html") {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    const htmlPath = path.join(__dirname, "dashboard.html");
+    if (fs.existsSync(htmlPath)) {
+      fs.createReadStream(htmlPath).pipe(res);
+    } else {
+      res.end("<h1>dashboard.html not found</h1>");
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/state") {
+    const runs = parseRuns();
+    const agents = getAgentStates(runs);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ agents, runs: runs.slice(0, 100), events: recentEvents.slice(-100), meta: AGENT_META }));
+    return;
+  }
+
+  if (url.pathname === "/api/run" && url.searchParams.get("id")) {
+    const all = loadRuns();
+    const run = all[url.searchParams.get("id")];
+    res.writeHead(run ? 200 : 404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(run || { error: "not found" }));
+    return;
+  }
+
+  if (url.pathname === "/events") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    });
+    res.write("event: connected\ndata: {}\n\n");
+    sseClients.add(res);
+    req.on("close", () => sseClients.delete(res));
+    return;
+  }
+
+  res.writeHead(404);
+  res.end("Not found");
+});
+
+server.listen(PORT, () => {
+  console.log(`\n  🦞 OpenClaw Live Dashboard`);
+  console.log(`  ── http://localhost:${PORT}\n`);
+  console.log(`  Watching:`);
+  console.log(`    Runs:  ${RUNS_FILE}`);
+  console.log(`    Logs:  ${getTodayLogFile()}`);
+  console.log(`    Agents: ${Object.keys(AGENT_META).join(", ")}\n`);
+});
+
+// Start polling
+setInterval(tailLog, 2000);
+setInterval(watchRuns, 3000);
+tailLog();
+watchRuns();

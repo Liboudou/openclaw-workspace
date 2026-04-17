@@ -1,1 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Runtime / generated data
+.memsearch/
+.openclaw/
+.clawhub/
 usage.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Media / screenshots (generated at runtime)
+screenshot*.png
+*.png
+*.jpg
+*.jpeg
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
