@@ -141,15 +141,17 @@ sessions_spawn({
 8. **Max 2 retries per step** — if something fails twice, change strategy or report the blocker
 9. **Tell the coder to CREATE REAL FILES and INIT GIT** — include verbatim in every coder task:
    "IMPORTANT — GIT + FILES (Windows PowerShell):
-   1. cd C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME (create dir if needed)
-   2. Create all project files using exec/heredoc — physically write every file on disk
-   3. Verify files exist with Get-ChildItem
-   4. git init (skip if .git already exists)
-   5. git remote add origin https://github.com/Music-Maniacs/openclaw-workspace.git (skip if already set)
-   6. git fetch origin main --depth=1 2>$null; git checkout -b feat/PROJECT_NAME 2>$null || git checkout feat/PROJECT_NAME
-   7. git add -A
-   8. git commit -m 'feat(PROJECT_NAME): initial implementation'
-   9. Report the branch name in your output."
+   1. New-Item -ItemType Directory -Force -Path C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME | Out-Null
+   2. cd C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME
+   3. Create all project files using exec/heredoc — physically write every file on disk
+   4. Verify files exist with Get-ChildItem
+   5. if (-not (Test-Path '.git')) { git init }
+   6. git remote add origin https://github.com/Liboudou/openclaw-workspace.git 2>$null
+   7. git checkout -b feat/PROJECT_NAME 2>$null; if ($LASTEXITCODE -ne 0) { git checkout feat/PROJECT_NAME }
+   8. git add -A
+   9. git commit -m 'feat(PROJECT_NAME): initial implementation'
+   ⚠️ NEVER run git clone, git fetch, or git pull — do NOT download anything from the remote. Only init + branch + commit.
+   10. Report the branch name in your output."
 
 10. **Tell the designer to CREATE REAL FILES and COMMIT** — include verbatim in every designer task:
     "IMPORTANT — GIT + FILES (Windows PowerShell):

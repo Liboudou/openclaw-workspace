@@ -33,6 +33,7 @@ Before writing any file, ALWAYS:
 
 - NEVER create files in `workspace/agents/coder/` — that's your config, not project code
 - NEVER create files relative to your starting directory — always use the absolute project path
+- NEVER run `git clone`, `git fetch`, or `git pull` — do NOT download anything from the remote into a project folder. Only `git init` + create branch + commit your own files.
 
 ## What You Do
 
