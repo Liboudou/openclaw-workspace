@@ -58,10 +58,15 @@ User → YOU (orchestrator)
          ├── understand intent
          ├── decompose into tasks
          │
-         ├── dispatch to worker agent(s)
-         │   ├── architect (Strut) — design
-         │   ├── coder (Hex) — implementation
-         │   └── reviewer (Lens) — code review
+         ├── dispatch to conductor (for multi-step projects)
+         │   └── conductor runs the full pipeline:
+         │       ├── architect (Strut) — design + frontend specs
+         │       ├── designer (Iris)   — UI/UX with shadcn/ui
+         │       ├── coder (Hex)       — backend implementation
+         │       ├── tester (Check)    — QA & validation
+         │       └── reviewer (Lens)   — code review + git
+         │
+         ├── OR dispatch directly to a specialist (single-step tasks)
          │
          ├── collect structured results
          ├── validate & assemble
@@ -91,14 +96,17 @@ User → YOU (orchestrator)
 ### Decision Tree — Who Do You Call?
 
 ```
-Multi-step project (design+code+review)?  → dispatch to conductor (autonomous pipeline)
-Task involves writing or fixing code?      → dispatch to coder (Hex)
-Task involves system design, API, tech?    → dispatch to architect (Strut)
-Task involves reviewing code quality?      → dispatch to reviewer (Lens)
+Full-stack or web app (UI + backend)?      → dispatch to conductor (runs architect → designer → coder → tester → reviewer)
+Backend-only project?                      → dispatch to conductor (runs architect → coder → tester → reviewer)
+UI-only / design task?                     → dispatch to conductor (runs architect → designer → tester → reviewer)
+Single coding fix (no design needed)?      → dispatch to coder (Hex) directly
+Single design fix (UI tweak)?              → dispatch to designer (Iris) directly
+System design question only?               → dispatch to architect (Strut) directly
+Code review only?                          → dispatch to reviewer (Lens) directly
 Simple question, file read, search?        → handle yourself, no dispatch needed
 ```
 
-**Default bias for projects: use conductor.** If the work involves more than one agent, conductor handles the full pipeline autonomously. You just send the brief and wait for the result.
+**Default bias for projects: use conductor.** If the work involves more than one agent, conductor handles the full pipeline autonomously — including designer when there's a UI. You just send the brief and wait for the result.
 
 For single-step tasks: dispatch directly to the specialist.
 
@@ -360,6 +368,8 @@ Default heartbeat prompt:
 
 ```
 workspace/                  ← ton espace (orchestrator)
+├── package.json            ← dépendances npm communes (ne jamais supprimer)
+├── node_modules/           ← installé UNE SEULE FOIS — ne pas retoucher sans raison
 ├── memory/                 ← tes notes et mémoire journalière (YYYY-MM-DD.md)
 ├── sandbox/                ← tes tests, scripts, brouillons
 ├── projects/               ← ESPACE COMMUN — partagé avec les workers
@@ -369,6 +379,59 @@ workspace/                  ← ton espace (orchestrator)
     ├── coder/              ← workspace de Hex
     └── reviewer/           ← workspace de Lens
 ```
+
+## Node / npm — Règles absolues
+
+> ⛔ **Ne jamais relancer `npm install` si le module est déjà présent dans `workspace/node_modules/`.**
+> ⛔ **Ne jamais créer de `node_modules/` dans un sous-dossier projet** — tout passe par le workspace root.
+> ⛔ **Ne jamais faire `npm install` sans `--prefix`** — sans ça, npm écrit dans le CWD courant et peut saturer la RAM si plusieurs agents tournent en parallèle.
+
+### Règle 1 — Vérifier avant d'installer
+
+```bash
+# Vérifier si un module est déjà disponible
+node -e "require('express')" && echo "OK" || echo "MISSING"
+```
+
+Si `OK` → ne rien faire, utiliser directement.
+
+### Règle 2 — Installer au bon endroit
+
+```bash
+# Toujours installer dans le workspace root
+npm install <package> --prefix "C:\Users\Lilian\.openclaw\workspace"
+```
+
+### Règle 3 — Utiliser les modules existants
+
+Les packages déjà installés dans le workspace :
+- `next`, `react`, `react-dom` — projets front-end Next.js
+- `playwright`, `playwright-mcp` — tests E2E et browser automation
+- `@opentelemetry/*` — tracing et observabilité
+
+Pour les projets, pointer vers le workspace via `require` ou `NODE_PATH` :
+
+```bash
+NODE_PATH="C:\Users\Lilian\.openclaw\workspace\node_modules" node mon-script.js
+```
+
+### Règle 4 — Git : ne jamais commiter `node_modules/`
+
+Le `.gitignore` de chaque projet doit contenir :
+```
+node_modules/
+.env
+*.log
+```
+
+Seuls `package.json` et `package-lock.json` vont dans git. Jamais `node_modules/`.
+
+### Règle 5 — Quand un projet a des dépendances spécifiques
+
+Si un projet a besoin d'un package non présent dans le workspace :
+1. D'abord vérifier si ça peut s'ajouter au `workspace/package.json` (réutilisable)
+2. Sinon, créer un `package.json` dans `projects/[nom-projet]/` et installer avec `--prefix projects/[nom-projet]`
+3. Toujours gitignorer le `node_modules/` local au projet
 
 ## Skills disponibles
 

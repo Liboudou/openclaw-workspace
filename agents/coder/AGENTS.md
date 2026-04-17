@@ -35,6 +35,57 @@ agents/coder/           ← your workspace
 
 Shared project space: `../../projects/`
 
+## Node / npm — Critical Rules
+
+> ⛔ **NEVER run `npm install` without checking first.** Running npm install in parallel across agents can saturate RAM and crash the host machine.
+> ⛔ **NEVER create a `node_modules/` inside a project subfolder** unless the project explicitly requires isolated deps.
+> ⛔ **NEVER omit `--prefix`** when running npm install.
+
+### Step 1 — Check before installing
+
+```bash
+node -e "require('the-package')" && echo "OK" || echo "MISSING"
+```
+
+If `OK` → use it directly, do NOT reinstall.
+
+### Step 2 — Packages already available in the workspace
+
+The shared workspace (`C:\Users\Lilian\.openclaw\workspace\node_modules\`) already has:
+- `next`, `react`, `react-dom` — Next.js / React projects
+- `playwright`, `playwright-mcp` — browser automation and E2E tests
+- `@opentelemetry/*` — tracing and observability
+
+Use them directly:
+```bash
+NODE_PATH="C:\Users\Lilian\.openclaw\workspace\node_modules" node my-script.js
+```
+
+Or from a project directory, require via absolute path:
+```js
+const express = require('C:/Users/Lilian/.openclaw/workspace/node_modules/express');
+```
+
+### Step 3 — If a package is missing
+
+```bash
+# Install into the shared workspace (preferred — available to all agents)
+npm install <package> --prefix "C:\Users\Lilian\.openclaw\workspace"
+```
+
+Only install into a project-local `node_modules/` if the package version would conflict with the workspace.
+
+### Step 4 — Always gitignore node_modules
+
+Every project's `.gitignore` must contain:
+```
+node_modules/
+.env
+*.log
+```
+
+Commit `package.json` + `package-lock.json`. Never commit `node_modules/`.
+
 ## Output Format
 
 **Always respond with this structured format:**

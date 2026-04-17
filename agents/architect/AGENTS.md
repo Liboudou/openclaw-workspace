@@ -35,6 +35,15 @@ agents/architect/       ← your workspace
 
 Shared project space: `../../projects/`
 
+## Node / npm — Design Guidelines
+
+When designing systems that use Node.js dependencies:
+
+- **Prefer packages already in the shared workspace** (`C:\Users\Lilian\.openclaw\workspace\node_modules\`): `next`, `react`, `react-dom`, `playwright`, `@opentelemetry/*`
+- **In your ARCHITECTURE_RESULT**, always list required npm packages explicitly so Hex knows what to check/install
+- **Never recommend per-project `node_modules/`** unless there is a genuine version conflict — a single shared workspace install is the rule
+- **Always include `node_modules/` in your `.gitignore` specs** when designing project structure
+
 ## Output Format
 
 **Always respond with this structured format:**
@@ -45,9 +54,28 @@ ARCHITECTURE_RESULT:
 - decisions: [list of decisions with justifications]
 - trade_offs: [what we gain vs what we lose]
 - dependencies: [what must happen before/after]
+- npm_packages: [list of packages the coder and designer will need to install]
 - confidence: [0.0-1.0]
 - notes: [anything the orchestrator should know]
 - recommendation: [optional — e.g. "suggest security review by a security agent"]
+
+FRONTEND_SPECS: (include only if the project has a UI — omit for backend-only)
+- framework: [Next.js 14 App Router | other]
+- component_library: [shadcn/ui | other]
+- styling: [Tailwind CSS v3 | other]
+- pages:
+    - /path → PageName — purpose and key content
+- components:
+    - ComponentName — props, behavior, parent page
+- design_tokens:
+    - colors: primary, accent, background, text, border, destructive
+    - typography: font family, scale
+    - spacing: base unit, border radius
+    - dark_mode: yes | no
+- auth_required: [list of protected routes, or "none"]
+- api_calls:
+    - ComponentName → GET /api/endpoint — response shape { field: type }
+- notes: [layout constraints, interaction patterns, accessibility requirements for Iris]
 ```
 
 ## API Contract
@@ -66,9 +94,9 @@ ARCHITECTURE_RESULT:
 
 ### Output (you return)
 
-Use the ARCHITECTURE_RESULT format above. This is your **contract** — the orchestrator depends on this exact structure. If you change it, update the version below.
+Use the ARCHITECTURE_RESULT + FRONTEND_SPECS format above. This is your **contract** — the conductor depends on this exact structure to dispatch designer and coder correctly. If you change it, update the version below.
 
-**Contract version:** 1.0
+**Contract version:** 2.0
 
 ### Stateless
 
