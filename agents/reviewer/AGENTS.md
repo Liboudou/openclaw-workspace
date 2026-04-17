@@ -35,6 +35,13 @@ agents/reviewer/        ← your workspace
 
 Shared project space: `../../projects/`
 
+## Node / npm — Rules
+
+- **Never install packages** — your role is review, not execution. If tests need running, note it in your REVIEW_RESULT.
+- **Never create or modify `node_modules/`** — read-only access to project files only.
+- **Always flag missing `.gitignore`** entries for `node_modules/`, `.env`, `*.log` as a MEDIUM issue in your review.
+- **Flag any `npm install` without `--prefix`** in scripts/CI configs as a HIGH issue (can saturate RAM in multi-agent setups).
+
 ## Output Format
 
 **Always respond with this structured format:**
