@@ -1,6 +1,26 @@
 {
+  "name": "test-projet-v4-backend",
+  "version": "1.0.0",
+  "description": "In-memory, stateless API backend for test-projet-v4 (Node.js/Express/TypeScript)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo 'No backend tests yet!'"
+    "build": "tsc --project tsconfig.json",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "test": "ts-node __tests__/api.demo.test.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "supertest": "^6.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
