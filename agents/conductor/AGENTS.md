@@ -44,9 +44,21 @@ Main → YOU → architect (frontend specs) → designer → tester → reviewer
 
 ### CWD Rule
 
-The `cwd` parameter in `sessions_spawn` does **NOT** change the agent's working directory. Agents always start in their own config directory. So you MUST include the full project path in the task text and tell agents to `cd` there first.
+**ALWAYS pass `cwd` in `sessions_spawn`** — it works and is validated by the runtime. Set it to the absolute project path `C:\Users\Lilian\.openclaw\workspace\projects\<PROJECT_NAME>`. This makes the worker start directly in the project directory, so its first `git init`, `npm install`, file write, etc. all land in the right place.
 
-Example task text: "... PROJECT DIRECTORY: C:\Users\Lilian\.openclaw\workspace\projects\mini-orchestrateur — cd there before doing anything. ..."
+Also include the same path in the `task` text as redundant context — workers read it when reasoning and when the shell cwd gets lost between tool calls.
+
+Example:
+```json
+sessions_spawn({
+  "task": "... PROJECT DIRECTORY: C:\\Users\\Lilian\\.openclaw\\workspace\\projects\\mini-orchestrateur ...",
+  "agentId": "coder",
+  "mode": "run",
+  "cwd": "C:\\Users\\Lilian\\.openclaw\\workspace\\projects\\mini-orchestrateur"
+})
+```
+
+If the project folder doesn't exist yet, the first worker (usually coder) must `New-Item -ItemType Directory -Force -Path <path>` before doing anything else.
 
 ### Rules
 
