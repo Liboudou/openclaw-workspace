@@ -121,20 +121,13 @@ Step 5: synthesize
 ### How to Dispatch
 ```json
 sessions_spawn({
-  "task": "FULL CONTEXT HERE — include the brief AND all previous results — worker has ZERO memory. PROJECT PATH: C:\\Users\\Lilian\\.openclaw\\workspace\\projects\\PROJECT_NAME.",
+  "task": "FULL CONTEXT HERE — include the brief AND all previous results — worker has ZERO memory. PROJECT PATH: C:\\Users\\Lilian\\.openclaw\\workspace\\projects\\PROJECT_NAME. You MUST cd to this path before doing any work.",
   "agentId": "coder",
-  "mode": "run",
-  "cwd": "C:\\Users\\Lilian\\.openclaw\\workspace\\projects\\PROJECT_NAME"
+  "mode": "run"
 })
 ```
 
-**⚠️ MANDATORY `cwd` PARAMETER.** Every `sessions_spawn` call MUST include `cwd` set to the absolute project path `C:\Users\Lilian\.openclaw\workspace\projects\<PROJECT_NAME>`. This forces the worker to start directly in the project directory for ALL file operations, git commands, npm calls, etc. WITHOUT `cwd`, the agent will fall back to its own agent directory and pollute it with project files — this is the #1 failure mode.
-
-**Also include the project path in the `task` text** as a redundant safety (workers sometimes need to reconstruct the path in their reasoning).
-
-If the project directory does not exist yet (first dispatch of a new project, usually to the coder), the worker must create it:
-  `New-Item -ItemType Directory -Force -Path C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME`
-then `cd` into it. The `cwd` param will still resolve to the parent if the folder does not exist — the worker must mkdir first.
+**ALWAYS include the project path** `C:\Users\Lilian\.openclaw\workspace\projects\PROJECT_NAME` in the task text and tell the agent to `cd` there first. Agents start in their own config directory, NOT the project directory.
 
 ### Critical Rules
 

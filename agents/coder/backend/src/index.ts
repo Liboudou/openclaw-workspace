@@ -1,6 +1,11 @@
-import app from "./app";
+import express from 'express';
+const app = express();
 
-const PORT = 3001;
+app.get('/', (_req, res) => {
+  res.send('Backend API is running.');
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Backend listening (stateless, in-memory) on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
