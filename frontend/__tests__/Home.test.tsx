@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import HomePage from '../pages';
-import fetch from 'jest-fetch-mock';
 
-jest.mock('cross-fetch', () => fetch);
-
-fetch.mockResponseOnce(
-  JSON.stringify({
-    cards: [
-      { id: '1', name: 'Test Card', description: 'Test Description' }
-    ]
+// Use Vitest's vi to mock fetch
+;(globalThis as any).fetch = vi.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({
+      cards: [
+        { id: '1', name: 'Test Card', description: 'Test Description' }
+      ]
+    })
   })
 );
 
